@@ -1,19 +1,19 @@
 {
-    "name": "weboldalnet/package-template",
+    "name": "weboldalnet/commerce-core",
     "description": "teszt",
     "type": "library",
     "autoload": {
         "psr-4": {
-            "Weboldalnet\\PackageTemplate\\": [ "src/",  "app/"]
+            "Weboldalnet\\CommerceCore\\": [ "src/",  "app/"]
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Weboldalnet\\PackageTemplate\\ArticleServiceProvider"
+                "Weboldalnet\\CommerceCore\\CommerceCoreServiceProvider"
             ],
             "aliases": {
-                "ArticleServiceProvider": "Weboldalnet\\PackageTemplate\\ArticleServiceProvider"
+                "CommerceCoreServiceProvider": "Weboldalnet\\CommerceCore\\CommerceCoreServiceProvider"
             }
         }
     },
