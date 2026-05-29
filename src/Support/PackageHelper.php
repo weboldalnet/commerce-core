@@ -1,6 +1,6 @@
 <?php
 
-namespace Weboldalnet\PackageTemplate\Support;
+namespace Weboldalnet\CommerceCore\Support;
 
 class PackageHelper
 {

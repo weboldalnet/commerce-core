@@ -1,13 +1,13 @@
 <?php
 
-namespace Weboldalnet\PackageTemplate;
+namespace Weboldalnet\CommerceCore;
 
 use Illuminate\Support\ServiceProvider;
-use Weboldalnet\PackageTemplate\Support\PackageHelper;
-use Weboldalnet\PackageTemplate\Console\ExtendViewsArticlesCommand;
-use Weboldalnet\PackageTemplate\Console\InstallArticlesCommand;
+use Weboldalnet\CommerceCore\Support\PackageHelper;
+use Weboldalnet\CommerceCore\Console\ExtendViewsArticlesCommand;
+use Weboldalnet\CommerceCore\Console\InstallArticlesCommand;
 
-class ArticleServiceProvider extends ServiceProvider
+class CommerceCoreServiceProvider extends ServiceProvider
 {
     public function boot()
     {
