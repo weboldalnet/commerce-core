@@ -110,4 +110,4 @@ return new class extends Migration
         DB::statement("DROP TABLE IF EXISTS public.commerce_invoice_documents CASCADE");
         DB::statement("DROP TABLE IF EXISTS public.commerce_payment_transactions CASCADE");
     }
-}
+};
