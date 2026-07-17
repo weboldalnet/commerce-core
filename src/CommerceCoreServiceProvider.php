@@ -3,41 +3,78 @@
 namespace Weboldalnet\CommerceCore;
 
 use Illuminate\Support\ServiceProvider;
+use Weboldalnet\CommerceCore\Managers\InvoiceManager;
+use Weboldalnet\CommerceCore\Managers\PaymentManager;
+use Weboldalnet\CommerceCore\Managers\ShippingManager;
+use Weboldalnet\CommerceCore\Services\CommerceOrderProcessor;
+use Weboldalnet\CommerceCore\Services\PaymentCallbackProcessor;
+use Weboldalnet\CommerceCore\Services\ProviderLogger;
 use Weboldalnet\CommerceCore\Support\PackageHelper;
-use Weboldalnet\CommerceCore\Console\ExtendViewsArticlesCommand;
-use Weboldalnet\CommerceCore\Console\InstallArticlesCommand;
 
 class CommerceCoreServiceProvider extends ServiceProvider
 {
     public function boot()
     {
-        // route-ok
+        // Route-ok betöltése
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
-        $this->loadViewsFrom(__DIR__.'/../settings/views', PackageHelper::PACKAGE_PREFIX);
 
-        // migrációk
-        //$this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        // Migrációk betöltése
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
-        $publishList = [];
-        foreach (PackageHelper::PACKAGE_LIST as $name => $publish) {
-            $this->publishes([
-                $publish['source'] => base_path($publish['destination']),
-            ], PackageHelper::PACKAGE_PREFIX . '-' . $name);
+        // Config publikálhatóvá tétele
+        $this->publishes([
+            __DIR__.'/../config/commerce-core.php' => config_path('commerce-core.php'),
+        ], PackageHelper::PACKAGE_PREFIX . '-config');
 
-            $publishList[$publish['source']] = base_path($publish['destination']);
-        }
+        // Migrációk publikálhatóvá tétele
+        $this->publishes([
+            __DIR__.'/../database/migrations' => database_path('migrations'),
+        ], PackageHelper::PACKAGE_PREFIX . '-migrations');
 
-        $this->publishes($publishList, PackageHelper::PACKAGE_PREFIX . '-all');
+        // Összes publish egy tagbe
+        $this->publishes([
+            __DIR__.'/../config/commerce-core.php' => config_path('commerce-core.php'),
+            __DIR__.'/../database/migrations' => database_path('migrations'),
+        ], PackageHelper::PACKAGE_PREFIX . '-all');
     }
 
     public function register()
     {
-        $this->commands([
-            InstallArticlesCommand::class,
-        ]);
+        // Config merge
+        $this->mergeConfigFrom(__DIR__.'/../config/commerce-core.php', 'commerce-core');
 
-        $this->commands([
-            ExtendViewsArticlesCommand::class,
-        ]);
+        // PaymentManager singleton
+        $this->app->singleton(PaymentManager::class, function ($app) {
+            return new PaymentManager();
+        });
+
+        // InvoiceManager singleton
+        $this->app->singleton(InvoiceManager::class, function ($app) {
+            return new InvoiceManager();
+        });
+
+        // ShippingManager singleton
+        $this->app->singleton(ShippingManager::class, function ($app) {
+            return new ShippingManager();
+        });
+
+        // ProviderLogger singleton
+        $this->app->singleton(ProviderLogger::class, function ($app) {
+            return new ProviderLogger();
+        });
+
+        // PaymentCallbackProcessor singleton
+        $this->app->singleton(PaymentCallbackProcessor::class, function ($app) {
+            return new PaymentCallbackProcessor(
+                $app->make(PaymentManager::class)
+            );
+        });
+
+        // CommerceOrderProcessor singleton
+        $this->app->singleton(CommerceOrderProcessor::class, function ($app) {
+            return new CommerceOrderProcessor(
+                $app->make(PaymentManager::class)
+            );
+        });
     }
 }

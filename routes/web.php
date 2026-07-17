@@ -1,21 +1,18 @@
 <?php
 
-use App\Helpers\CustomPageHelper;
+use Weboldalnet\CommerceCore\Http\Controllers\CommercePaymentController;
 
-use App\Http\Controllers\Admin\Article\ArticleController;
+Route::middleware('web')->group(function () {
+    Route::prefix('commerce/payment')
+        ->name('commerce.payment.')
+        ->group(function () {
+            // Payment return URL (online fizetés visszatérése)
+            Route::get('/{provider}/return', [CommercePaymentController::class, 'return'])
+                ->name('return');
 
-Route::namespace('App\Http\Controllers\Site')->domain(getSiteDomain())->middleware('web', 'site_share')->group(function () {
-    // Site route-ok helye
-
-});
-
-Route::namespace('App\Http\Controllers\Admin')->domain(getAdminDomain())->middleware('web', 'admin_share')->group(function () {
-
-    Route::middleware('auth:admin')->group(function () {
-        // Admin route-ok helye
-        // Admin ha tovább vannak mappázva
-        Route::namespace('Article')->group(function () {
-
+            // Payment callback / webhook URL (provider szerver oldali értesítés)
+            Route::post('/{provider}/callback', [CommercePaymentController::class, 'callback'])
+                ->name('callback')
+                ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
         });
-    });
 });

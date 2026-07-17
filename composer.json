@@ -1,6 +1,6 @@
 {
     "name": "weboldalnet/commerce-core",
-    "description": "teszt",
+    "description": "Commerce Core - moduláris fizetési, számlázási és szállítási absztrakciós réteg",
     "type": "library",
     "autoload": {
         "psr-4": {
