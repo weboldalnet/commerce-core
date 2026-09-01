@@ -10,6 +10,8 @@ class ProviderLogger
         'token', 'secret', 'password', 'api_key', 'merchant_key',
         'signature', 'card_number', 'cvv', 'cvc', 'expiry',
         'pan', 'card_data', 'private_key', 'auth_token',
+        // Provider specifikus kulcsok (a nevekre részsztring-egyezés megy)
+        'poskey', 'pos_key', 'agent_key', 'agentkey',
     ];
 
     public function __construct()

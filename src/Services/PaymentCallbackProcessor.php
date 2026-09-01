@@ -2,6 +2,7 @@
 
 namespace Weboldalnet\CommerceCore\Services;
 
+use Illuminate\Support\Facades\Log;
 use Weboldalnet\CommerceCore\Events\PaymentCancelled;
 use Weboldalnet\CommerceCore\Events\PaymentFailed;
 use Weboldalnet\CommerceCore\Events\PaymentSucceeded;
@@ -33,8 +34,11 @@ class PaymentCallbackProcessor
 
         $providerTransactionId = $result->providerTransactionId;
         $transactionId = $result->transactionId;
-        $orderId = $result->orderId;
         $newStatus = $result->status;
+
+        // Az order_id oszlop INTEGER. Több provider (pl. Barion) a saját azonosítójában
+        // a rendelésszámot adja vissza ("20260901-AB12"), ami nem numerikus – azt nem írjuk be.
+        $orderId = is_numeric($result->orderId) ? (int) $result->orderId : null;
 
         // Keressük a meglévő tranzakciót
         $transaction = null;
@@ -49,6 +53,19 @@ class PaymentCallbackProcessor
                 ->first();
         }
 
+        // Ha a provider egyáltalán nem tudta azonosítani a fizetést (nincs sem provider oldali,
+        // sem saját tranzakció azonosító), nincs mit feldolgozni. Ilyen pl. amikor valaki a
+        // visszatérési oldalt a provider query paraméterei nélkül nyitja meg (könyvjelző,
+        // frissítés, vissza gomb). Ilyenkor NEM hozunk létre üres tranzakciót.
+        if (!$transaction && !$providerTransactionId && !$transactionId) {
+            return [
+                'skipped' => true,
+                'reason' => 'A callback nem tartalmazott azonosítható tranzakciót.',
+                'transaction' => null,
+                'result' => $result,
+            ];
+        }
+
         // Idempotencia ellenőrzés: ha már végállapotban van, ne dolgozzuk fel újra
         if ($transaction && in_array($transaction->status, [PaymentStatus::PAID, PaymentStatus::REFUNDED])) {
             return [
@@ -61,6 +78,17 @@ class PaymentCallbackProcessor
 
         // Tranzakció létrehozása vagy frissítése
         if (!$transaction) {
+            if (!$orderId) {
+                // Ilyenkor a rendeléshez nem tudjuk hozzákötni a fizetést, így a webshop
+                // státuszfrissítő listenerei sem futnak le – ez mindig kivizsgálandó.
+                Log::warning('PaymentCallbackProcessor: callback érkezett ismeretlen tranzakcióra, rendelés azonosító nélkül.', [
+                    'provider' => $providerCode,
+                    'provider_transaction_id' => $providerTransactionId,
+                    'transaction_id' => $transactionId,
+                    'raw_order_id' => $result->orderId,
+                ]);
+            }
+
             $transaction = PaymentTransaction::create([
                 'order_id' => $orderId,
                 'provider' => $providerCode,
@@ -82,16 +110,29 @@ class PaymentCallbackProcessor
             }
         }
 
-        // Státusz frissítés és event küldés
+        // Státusz frissítés és event küldés.
+        // FONTOS: csak valódi végállapotra küldünk eventet. A folyamatban lévő
+        // (pending) fizetés nem sikertelen – ha a vásárló a fizetés befejezése előtt
+        // tér vissza, vagy a provider köztes állapotról küld callbacket, a rendelést
+        // nem szabad sikertelenre állítani.
         if ($result->success && $newStatus === PaymentStatus::PAID) {
             $transaction->markAsPaid();
             event(new PaymentSucceeded($transaction->order_id, $providerCode, $transaction, $result));
         } elseif ($newStatus === PaymentStatus::CANCELLED) {
             $transaction->markAsCancelled();
             event(new PaymentCancelled($transaction->order_id, $providerCode, $transaction, $result));
-        } elseif ($newStatus === PaymentStatus::FAILED || !$result->success) {
+        } elseif ($newStatus === PaymentStatus::FAILED) {
             $transaction->markAsFailed();
             event(new PaymentFailed($transaction->order_id, $providerCode, $transaction, $result));
+        } elseif (!$result->success && $newStatus !== PaymentStatus::PENDING) {
+            // Nem tudtuk megállapítani az állapotot (pl. a provider lekérdezés hibázott).
+            // Ez sem végállapot: a tranzakciót hagyjuk, csak naplózunk.
+            Log::warning('PaymentCallbackProcessor: eldönthetetlen fizetési állapot, a tranzakció változatlan.', [
+                'provider' => $providerCode,
+                'transaction_id' => $transaction->id,
+                'status' => $newStatus,
+                'message' => $result->message ?? null,
+            ]);
         }
 
         return [

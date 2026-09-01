@@ -20,6 +20,8 @@ class InvoiceDocument extends Model
         'pdf_path',
         'request_payload',
         'response_payload',
+        'error_code',
+        'error_message',
         'issued_at',
         'voided_at',
     ];
@@ -31,6 +33,39 @@ class InvoiceDocument extends Model
         'issued_at' => 'datetime',
         'voided_at' => 'datetime',
     ];
+
+    /**
+     * A rendelés modell osztálya. A commerce-core szándékosan nem függ a webshop
+     * csomagtól: a modellt a commerce-core.order_model configból vesszük, és csak
+     * végszükségben esünk vissza a webshop-ai-default modelljére.
+     */
+    public static function orderModelClass()
+    {
+        $configured = config('commerce-core.order_model');
+        if ($configured && class_exists($configured)) {
+            return $configured;
+        }
+
+        $fallback = 'Weboldalnet\\WebshopAiDefault\\Models\\WebshopOrder';
+
+        return class_exists($fallback) ? $fallback : null;
+    }
+
+    /**
+     * A bizonylathoz tartozó rendelés.
+     * Ha nincs rendelés modell, üres, de érvényes relációt adunk vissza, hogy a
+     * with() / whereHas() hívások ne hasaljanak el.
+     */
+    public function order()
+    {
+        $orderModel = self::orderModelClass();
+
+        if (!$orderModel) {
+            return $this->belongsTo(self::class, 'order_id')->whereRaw('1 = 0');
+        }
+
+        return $this->belongsTo($orderModel, 'order_id');
+    }
 
     public function isInvoiced()
     {

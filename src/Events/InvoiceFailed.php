@@ -14,12 +14,14 @@ class InvoiceFailed
     public $provider;
     public $document;
     public $result;
+    public $message;
 
-    public function __construct($orderId, $provider, InvoiceDocument $document = null, InvoiceCreateResult $result = null)
+    public function __construct($orderId, $provider, InvoiceDocument $document = null, InvoiceCreateResult $result = null, $message = null)
     {
         $this->orderId = $orderId;
         $this->provider = $provider;
         $this->document = $document;
         $this->result = $result;
+        $this->message = $message ?? ($result->message ?? null);
     }
 }

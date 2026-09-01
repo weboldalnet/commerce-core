@@ -4,6 +4,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Rendelés modell
+    |--------------------------------------------------------------------------
+    |
+    | A commerce bizonylatok (fizetés, számla, szállítmány) ehhez a modellhez
+    | kapcsolódnak az order_id mezőn keresztül. Így a commerce-core nem függ
+    | közvetlenül a webshop csomagtól.
+    |
+    */
+    'order_model' => \Weboldalnet\WebshopAiDefault\Models\WebshopOrder::class,
+
+    /*
+    |--------------------------------------------------------------------------
     | Fizetési beállítások
     |--------------------------------------------------------------------------
     */
@@ -109,6 +121,8 @@ return [
             'token', 'secret', 'password', 'api_key', 'merchant_key',
             'signature', 'card_number', 'cvv', 'cvc', 'expiry',
             'pan', 'card_data', 'private_key', 'auth_token',
+            // Provider specifikus kulcsok (a nevekre részsztring-egyezés megy)
+            'poskey', 'pos_key', 'agent_key', 'agentkey',
         ],
     ],
 
