@@ -47,6 +47,68 @@ class PaymentManager
         $this->providers[$code] = $provider;
     }
 
+    /**
+     * A TELEPÍTETT fizetési integrációk (kód => metaadat), függetlenül attól,
+     * hogy éppen aktívak-e.
+     *
+     * A $providers csak az aktív példányokat tartalmazza, így abból nem derülne
+     * ki, mi közül lehet egyáltalán választani – és egy kikapcsolt modult nem
+     * lehetne az adminból visszakapcsolni, mert meg sem jelenne.
+     *
+     * Metaadatok: name, settings_url (admin beállítóoldal), online (bool).
+     */
+    protected $available = [];
+
+    /**
+     * Telepített fizetési integráció bejelentése.
+     * A csomagok a service providerükben, feltétel nélkül hívják.
+     */
+    public function registerAvailable($code, array $meta = [])
+    {
+        $this->available[$code] = array_merge([
+            'name' => $code,
+            'settings_url' => null,
+            'online' => true,
+        ], $meta);
+    }
+
+    /**
+     * Minden telepített fizetési integráció (kód => metaadat).
+     *
+     * A 'builtin' azt jelzi, hogy a commerce-core saját providere (nem külön
+     * telepített csomag), az 'active' pedig hogy be van-e kapcsolva.
+     */
+    public function getAvailableProviders()
+    {
+        $available = [];
+
+        foreach ($this->available as $code => $meta) {
+            $available[$code] = array_merge($meta, ['builtin' => false]);
+        }
+
+        foreach ($this->providers as $code => $provider) {
+            if (isset($available[$code])) {
+                continue;
+            }
+
+            $providerConfig = config('commerce-core.payments.providers.' . $code, []);
+
+            $available[$code] = [
+                'name' => $providerConfig['name']
+                    ?? (method_exists($provider, 'getName') ? $provider->getName() : $code),
+                'settings_url' => null,
+                'online' => method_exists($provider, 'isOnline') ? (bool) $provider->isOnline() : false,
+                'builtin' => true,
+            ];
+        }
+
+        foreach ($available as $code => $meta) {
+            $available[$code]['active'] = isset($this->providers[$code]);
+        }
+
+        return $available;
+    }
+
     public function getProvider($code)
     {
         $enabledCodes = config('commerce-core.payments.enabled', []);

@@ -10,6 +10,7 @@ use Weboldalnet\CommerceCore\Services\CommerceOrderProcessor;
 use Weboldalnet\CommerceCore\Services\PaymentCallbackProcessor;
 use Weboldalnet\CommerceCore\Services\ProviderLogger;
 use Weboldalnet\CommerceCore\Services\InvoiceService;
+use Weboldalnet\CommerceCore\Services\ShippingService;
 use Weboldalnet\CommerceCore\Support\PackageHelper;
 
 class CommerceCoreServiceProvider extends ServiceProvider
@@ -64,6 +65,13 @@ class CommerceCoreServiceProvider extends ServiceProvider
         // ShippingManager singleton
         $this->app->singleton(ShippingManager::class, function ($app) {
             return new ShippingManager();
+        });
+
+        // ShippingService singleton (az InvoiceService párja a szállítási oldalon)
+        $this->app->singleton(ShippingService::class, function ($app) {
+            return new ShippingService(
+                $app->make(ShippingManager::class)
+            );
         });
 
         // ProviderLogger singleton

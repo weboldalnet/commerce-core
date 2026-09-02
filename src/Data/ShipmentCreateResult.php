@@ -10,8 +10,11 @@ class ShipmentCreateResult
     public $trackingNumber;
     public $trackingUrl;
     public $labelPath;
+    /** A helyi commerce_shipments sor azonosítója (int) – NEM a csomagszám */
+    public $shipmentId;
     public $message;
     public $rawResponse;
+    public $extra;
 
     public function __construct(array $data = [])
     {
@@ -21,8 +24,10 @@ class ShipmentCreateResult
         $this->trackingNumber = $data['tracking_number'] ?? null;
         $this->trackingUrl = $data['tracking_url'] ?? null;
         $this->labelPath = $data['label_path'] ?? null;
+        $this->shipmentId = $data['shipment_id'] ?? null;
         $this->message = $data['message'] ?? null;
         $this->rawResponse = $data['raw_response'] ?? null;
+        $this->extra = $data['extra'] ?? [];
     }
 
     public static function fromArray(array $data)
@@ -51,8 +56,10 @@ class ShipmentCreateResult
             'tracking_number' => $this->trackingNumber,
             'tracking_url' => $this->trackingUrl,
             'label_path' => $this->labelPath,
+            'shipment_id' => $this->shipmentId,
             'message' => $this->message,
             'raw_response' => $this->rawResponse,
+            'extra' => $this->extra,
         ];
     }
 }

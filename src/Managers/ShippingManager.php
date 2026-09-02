@@ -46,6 +46,114 @@ class ShippingManager
         $this->providers[$code] = $provider;
     }
 
+    /**
+     * A TELEPÍTETT szállítási integrációk (kód => metaadat), függetlenül attól,
+     * hogy éppen aktívak-e.
+     *
+     * A $providers csak az aktív példányokat tartalmazza, így abból nem derülne
+     * ki, mi közül lehet egyáltalán választani – és egy kikapcsolt modult nem
+     * lehetne az adminból visszakapcsolni, mert meg sem jelenne.
+     *
+     * Metaadatok: name, settings_url (admin beállítóoldal), kind (lásd lent).
+     */
+    protected $available = [];
+
+    /**
+     * Szállítási mód jellege. A webshop pénztárában ez alapján csoportosulnak
+     * a módok (házhoz szállítás / csomagpont / személyes átvétel).
+     */
+    const KIND_HOME_DELIVERY = 'home_delivery';
+    const KIND_PARCEL_SHOP = 'parcel_shop';
+    const KIND_PICKUP = 'pickup';
+    const KIND_MANUAL = 'manual';
+
+    /**
+     * Telepített szállítási integráció bejelentése.
+     * A csomagok a service providerükben, feltétel nélkül hívják.
+     */
+    public function registerAvailable($code, array $meta = [])
+    {
+        $this->available[$code] = array_merge([
+            'name' => $code,
+            'settings_url' => null,
+            'kind' => self::KIND_HOME_DELIVERY,
+        ], $meta);
+    }
+
+    /**
+     * Minden telepített szállítási integráció (kód => metaadat).
+     *
+     * A 'builtin' azt jelzi, hogy a commerce-core saját providere (nem külön
+     * telepített csomag), az 'active' pedig hogy be van-e kapcsolva.
+     */
+    public function getAvailableProviders()
+    {
+        $available = [];
+
+        foreach ($this->available as $code => $meta) {
+            $available[$code] = array_merge($meta, ['builtin' => false]);
+        }
+
+        foreach ($this->providers as $code => $provider) {
+            if (isset($available[$code])) {
+                continue;
+            }
+
+            $providerConfig = config('commerce-core.shipping.providers.' . $code, []);
+
+            $available[$code] = [
+                'name' => $providerConfig['name']
+                    ?? (method_exists($provider, 'getName') ? $provider->getName() : $code),
+                'settings_url' => null,
+                'kind' => self::resolveKind($code, $providerConfig, $provider),
+                'builtin' => true,
+            ];
+        }
+
+        foreach ($available as $code => $meta) {
+            $available[$code]['active'] = isset($this->providers[$code]);
+        }
+
+        return $available;
+    }
+
+    /**
+     * Egy szállítási mód jellegének meghatározása.
+     *
+     * Sorrend: a provider saját getKind() metódusa, majd a config 'kind' kulcsa,
+     * végül a kód alapján történő felismerés – így a régebbi, ezt nem ismerő
+     * providerek is a helyes csoportba kerülnek.
+     */
+    public static function resolveKind($code, array $providerConfig = [], $provider = null)
+    {
+        if ($provider && method_exists($provider, 'getKind')) {
+            $kind = $provider->getKind();
+            if ($kind) {
+                return $kind;
+            }
+        }
+
+        if (!empty($providerConfig['kind'])) {
+            return $providerConfig['kind'];
+        }
+
+        if ($code === self::KIND_PICKUP) {
+            return self::KIND_PICKUP;
+        }
+
+        if ($code === self::KIND_MANUAL) {
+            return self::KIND_MANUAL;
+        }
+
+        foreach (['parcel', 'locker', 'point', 'shop'] as $needle) {
+            if (strpos($code, $needle) !== false) {
+                return self::KIND_PARCEL_SHOP;
+            }
+        }
+
+        return self::KIND_HOME_DELIVERY;
+    }
+
     public function getProvider($code)
     {
         if (!isset($this->providers[$code])) {

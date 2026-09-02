@@ -26,6 +26,22 @@ class Shipment extends Model
         'response_payload' => 'array',
     ];
 
+    /**
+     * A szállítmányhoz tartozó rendelés.
+     * A modellt a commerce-core.order_model config adja meg, hogy a csomag ne
+     * függjön közvetlenül a webshop csomagtól. Lásd InvoiceDocument::order().
+     */
+    public function order()
+    {
+        $orderModel = InvoiceDocument::orderModelClass();
+
+        if (!$orderModel) {
+            return $this->belongsTo(self::class, 'order_id')->whereRaw('1 = 0');
+        }
+
+        return $this->belongsTo($orderModel, 'order_id');
+    }
+
     public function isShipped()
     {
         return $this->status === ShippingStatus::SHIPPED;

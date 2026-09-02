@@ -11,9 +11,76 @@ class InvoiceManager
 {
     protected $providers = [];
 
+    /**
+     * A TELEPÍTETT számlázó integrációk (kód => metaadat), függetlenül attól,
+     * hogy éppen aktívak-e.
+     *
+     * A $providers csak az aktív (regisztrált) példányokat tartalmazza, így
+     * abból nem derülne ki, mi közül lehet egyáltalán választani. A webshop
+     * beállítófelülete ebből a listából kínálja fel a számlázó programokat,
+     * ezért egy új számlázó csomag bekötéséhez nem kell a webshophoz nyúlni.
+     *
+     * Metaadatok: name (megjelenő név), settings_url (admin beállítóoldal).
+     */
+    protected $available = [];
+
     public function __construct()
     {
         $this->loadProviders();
+    }
+
+    /**
+     * Telepített számlázó integráció bejelentése.
+     * A csomagok a service providerükben, feltétel nélkül hívják.
+     */
+    public function registerAvailable($code, array $meta = [])
+    {
+        $this->available[$code] = array_merge([
+            'name' => $code,
+            'settings_url' => null,
+        ], $meta);
+    }
+
+    /**
+     * Minden telepített számlázó integráció (kód => metaadat).
+     *
+     * Metaadatok:
+     *   name         – megjelenő név
+     *   settings_url – admin beállítóoldal (ha van)
+     *   builtin      – a commerce-core saját providere (pl. manuális számlázás),
+     *                  nem külön telepített integrációs csomag
+     *   active       – be van-e kapcsolva (regisztrált példány van-e)
+     */
+    public function getAvailableProviders()
+    {
+        $available = [];
+
+        foreach ($this->available as $code => $meta) {
+            $available[$code] = array_merge($meta, ['builtin' => false]);
+        }
+
+        // A configból betöltött (beépített) providerek is választhatók legyenek,
+        // akkor is, ha nem hívták rájuk a registerAvailable()-t.
+        foreach ($this->providers as $code => $provider) {
+            if (isset($available[$code])) {
+                continue;
+            }
+
+            $providerConfig = config('commerce-core.invoice.providers.' . $code, []);
+
+            $available[$code] = [
+                'name' => $providerConfig['name']
+                    ?? (method_exists($provider, 'getName') ? $provider->getName() : $code),
+                'settings_url' => null,
+                'builtin' => true,
+            ];
+        }
+
+        foreach ($available as $code => $meta) {
+            $available[$code]['active'] = isset($this->providers[$code]);
+        }
+
+        return $available;
     }
 
     protected function loadProviders()
