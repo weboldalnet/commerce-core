@@ -32,6 +32,25 @@ class PaymentCallbackProcessor
         $provider = $this->paymentManager->getProvider($providerCode);
         $result = $provider->handleCallback($payload);
 
+        return $this->processResult($providerCode, $result, $payload);
+    }
+
+    /**
+     * Ugyanaz a feldolgozás, de már kész eredménnyel.
+     *
+     * Akkor kell, ha az állapot nem callbackből érkezik, hanem mi kérdezzük le a
+     * providertől (pl. a fizetési eredmény oldal frissítése, amikor az IPN nem
+     * ért el minket). Így a tranzakció frissítése, az idempotencia és az
+     * eventek küldése egyetlen helyen marad – nem lesz belőle második,
+     * eltérően viselkedő út.
+     *
+     * @param string $providerCode
+     * @param PaymentCallbackResult $result
+     * @param array $payload naplózásra kerülő nyers adat (opcionális)
+     * @return array
+     */
+    public function processResult($providerCode, $result, array $payload = [])
+    {
         $providerTransactionId = $result->providerTransactionId;
         $transactionId = $result->transactionId;
         $newStatus = $result->status;
