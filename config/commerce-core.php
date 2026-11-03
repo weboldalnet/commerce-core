@@ -144,4 +144,26 @@ return [
         'enabled' => env('COMMERCE_AUTO_SHIPPING_ENABLED', false),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Fizetés-egyeztetés (commerce:reconcile-payments)
+    |--------------------------------------------------------------------------
+    |
+    | A függő online fizetések (Barion, SimplePay, Stripe …) állapotát a
+    | szolgáltatótól kérdezi le, ha az értesítésük nem érkezett meg. A Laravel
+    | ütemezője futtatja (a szerveren a szokásos `schedule:run` cron kell).
+    | schedule: metódusnév (everyFifteenMinutes, hourly …) vagy cron-kifejezés;
+    | üresen / false-szal kikapcsolva.
+    |
+    */
+    'reconcile' => [
+        'schedule' => env('COMMERCE_RECONCILE_SCHEDULE', 'everyFifteenMinutes'),
+        // ennyi napnál régebbi függő tranzakcióhoz nem nyúl (a szolgáltató már nem tartja)
+        'days' => (int) env('COMMERCE_RECONCILE_DAYS', 2),
+        // ennyi percnél frissebb tranzakcióhoz sem (a vásárló épp fizethet)
+        'min_age_minutes' => (int) env('COMMERCE_RECONCILE_MIN_AGE', 10),
+        // futásonként és szolgáltatónként legfeljebb ennyi lekérdezés
+        'limit' => 200,
+    ],
+
 ];

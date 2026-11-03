@@ -294,6 +294,22 @@ protected $listen = [
 
 ---
 
+## Fizetés-egyeztetés (ütemezett)
+
+Ha egy online szolgáltató értesítése (IPN / webhook) nem ér célba, és a vásárló sem tér vissza az oldalra, a rendelés
+„függőben” ragadna. A `commerce:reconcile-payments` parancs a függő tranzakciók állapotát lekérdezi a szolgáltatótól
+(`queryStatus()` — Barion, SimplePay, Stripe), és ugyanúgy dolgozza fel, mint az értesítést (`PaymentSucceeded` /
+`PaymentFailed` / `PaymentCancelled` esemény).
+
+- A csomag maga jelenti be a Laravel ütemezőjébe, alapból **15 percenként** — a szerveren csak a szokásos
+  `* * * * * php artisan schedule:run` cron kell.
+- A 10 percnél frissebb (a vásárló épp fizethet) és a 2 napnál régebbi tranzakciókhoz nem nyúl.
+- `.env`: `COMMERCE_RECONCILE_SCHEDULE` (metódusnév vagy cron-kifejezés; üresen kikapcsolva), `COMMERCE_RECONCILE_DAYS`,
+  `COMMERCE_RECONCILE_MIN_AGE`.
+- Kézzel: `php artisan commerce:reconcile-payments [--provider=barion] [--days=2] [--min-age=10]`.
+
+---
+
 ## Biztonsági megjegyzések
 
 - **Az összeget szerver oldalon számold**, soha ne fogadd el a klienstől.

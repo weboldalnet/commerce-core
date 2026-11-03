@@ -2,7 +2,9 @@
 
 namespace Weboldalnet\CommerceCore;
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\ServiceProvider;
+use Weboldalnet\CommerceCore\Console\ReconcilePaymentsCommand;
 use Weboldalnet\CommerceCore\Managers\InvoiceManager;
 use Weboldalnet\CommerceCore\Managers\PaymentManager;
 use Weboldalnet\CommerceCore\Managers\ShippingManager;
@@ -38,6 +40,26 @@ class CommerceCoreServiceProvider extends ServiceProvider
             __DIR__.'/../config/commerce-core.php' => config_path('commerce-core.php'),
             __DIR__.'/../database/migrations' => database_path('migrations'),
         ], PackageHelper::PACKAGE_PREFIX . '-all');
+
+        // Fizetés-egyeztetés a Laravel ütemezőjében: a szerveren elég a szokásos `schedule:run` cron, külön sor nem kell.
+        // Kikapcsolás: COMMERCE_RECONCILE_SCHEDULE= (üres) vagy false.
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
+            $frequency = config('commerce-core.reconcile.schedule');
+            if (!$frequency) {
+                return;
+            }
+
+            $event = $schedule->command('commerce:reconcile-payments')->withoutOverlapping(30);
+
+            // metódusnév (everyFifteenMinutes, hourly …) vagy cron-kifejezés (*/15 * * * *)
+            if (str_contains((string) $frequency, ' ')) {
+                $event->cron((string) $frequency);
+            } elseif (method_exists($event, (string) $frequency)) {
+                $event->{$frequency}();
+            } else {
+                $event->everyFifteenMinutes();
+            }
+        });
     }
 
     public function register()
@@ -92,5 +114,9 @@ class CommerceCoreServiceProvider extends ServiceProvider
                 $app->make(PaymentManager::class)
             );
         });
+
+        $this->commands([
+            ReconcilePaymentsCommand::class,
+        ]);
     }
 }

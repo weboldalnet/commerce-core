@@ -4,9 +4,12 @@ namespace Weboldalnet\CommerceCore\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Weboldalnet\CommerceCore\Status\PaymentStatus;
+use Weboldalnet\CommerceCore\Models\Concerns\UsesCommerceConnection;
 
 class PaymentTransaction extends Model
 {
+    use UsesCommerceConnection;
+
     protected $table = 'public.commerce_payment_transactions';
 
     protected $fillable = [

@@ -4,9 +4,12 @@ namespace Weboldalnet\CommerceCore\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Weboldalnet\CommerceCore\Status\ShippingStatus;
+use Weboldalnet\CommerceCore\Models\Concerns\UsesCommerceConnection;
 
 class Shipment extends Model
 {
+    use UsesCommerceConnection;
+
     protected $table = 'public.commerce_shipments';
 
     protected $fillable = [

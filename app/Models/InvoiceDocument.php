@@ -4,9 +4,12 @@ namespace Weboldalnet\CommerceCore\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Weboldalnet\CommerceCore\Status\InvoiceStatus;
+use Weboldalnet\CommerceCore\Models\Concerns\UsesCommerceConnection;
 
 class InvoiceDocument extends Model
 {
+    use UsesCommerceConnection;
+
     protected $table = 'public.commerce_invoice_documents';
 
     protected $fillable = [

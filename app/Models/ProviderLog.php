@@ -3,9 +3,12 @@
 namespace Weboldalnet\CommerceCore\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Weboldalnet\CommerceCore\Models\Concerns\UsesCommerceConnection;
 
 class ProviderLog extends Model
 {
+    use UsesCommerceConnection;
+
     protected $table = 'public.commerce_provider_logs';
 
     protected $fillable = [
