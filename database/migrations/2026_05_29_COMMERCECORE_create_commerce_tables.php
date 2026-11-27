@@ -30,10 +30,10 @@ return new class extends Migration
             )
         ");
 
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_payment_transactions_order_id ON public.commerce_payment_transactions (order_id)");
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_payment_transactions_transaction_id ON public.commerce_payment_transactions (transaction_id)");
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_payment_transactions_provider_transaction_id ON public.commerce_payment_transactions (provider_transaction_id)");
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_payment_transactions_status ON public.commerce_payment_transactions (status)");
+        $this->createIndex('idx_commerce_payment_transactions_order_id', 'public.commerce_payment_transactions (order_id)');
+        $this->createIndex('idx_commerce_payment_transactions_transaction_id', 'public.commerce_payment_transactions (transaction_id)');
+        $this->createIndex('idx_commerce_payment_transactions_provider_transaction_id', 'public.commerce_payment_transactions (provider_transaction_id)');
+        $this->createIndex('idx_commerce_payment_transactions_status', 'public.commerce_payment_transactions (status)');
 
         DB::statement("
             CREATE TABLE IF NOT EXISTS public.commerce_invoice_documents (
@@ -55,9 +55,9 @@ return new class extends Migration
             )
         ");
 
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_invoice_documents_order_id ON public.commerce_invoice_documents (order_id)");
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_invoice_documents_invoice_number ON public.commerce_invoice_documents (invoice_number)");
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_invoice_documents_status ON public.commerce_invoice_documents (status)");
+        $this->createIndex('idx_commerce_invoice_documents_order_id', 'public.commerce_invoice_documents (order_id)');
+        $this->createIndex('idx_commerce_invoice_documents_invoice_number', 'public.commerce_invoice_documents (invoice_number)');
+        $this->createIndex('idx_commerce_invoice_documents_status', 'public.commerce_invoice_documents (status)');
 
         DB::statement("
             CREATE TABLE IF NOT EXISTS public.commerce_shipments (
@@ -76,9 +76,9 @@ return new class extends Migration
             )
         ");
 
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_shipments_order_id ON public.commerce_shipments (order_id)");
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_shipments_tracking_number ON public.commerce_shipments (tracking_number)");
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_shipments_status ON public.commerce_shipments (status)");
+        $this->createIndex('idx_commerce_shipments_order_id', 'public.commerce_shipments (order_id)');
+        $this->createIndex('idx_commerce_shipments_tracking_number', 'public.commerce_shipments (tracking_number)');
+        $this->createIndex('idx_commerce_shipments_status', 'public.commerce_shipments (status)');
 
         DB::statement("
             CREATE TABLE IF NOT EXISTS public.commerce_provider_logs (
@@ -98,9 +98,9 @@ return new class extends Migration
             )
         ");
 
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_provider_logs_provider_type ON public.commerce_provider_logs (provider_type)");
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_provider_logs_provider ON public.commerce_provider_logs (provider)");
-        DB::statement("CREATE INDEX IF NOT EXISTS idx_commerce_provider_logs_order_id ON public.commerce_provider_logs (order_id)");
+        $this->createIndex('idx_commerce_provider_logs_provider_type', 'public.commerce_provider_logs (provider_type)');
+        $this->createIndex('idx_commerce_provider_logs_provider', 'public.commerce_provider_logs (provider)');
+        $this->createIndex('idx_commerce_provider_logs_order_id', 'public.commerce_provider_logs (order_id)');
     }
 
     public function down()
@@ -109,5 +109,22 @@ return new class extends Migration
         DB::statement("DROP TABLE IF EXISTS public.commerce_shipments CASCADE");
         DB::statement("DROP TABLE IF EXISTS public.commerce_invoice_documents CASCADE");
         DB::statement("DROP TABLE IF EXISTS public.commerce_payment_transactions CASCADE");
+    }
+
+    /**
+     * Index csak akkor, ha még nincs. A `CREATE INDEX IF NOT EXISTS` csak PostgreSQL 9.5-től létezik; a 9.4-es
+     * szervereken friss telepítésnél ezen állt meg a teljes migrate ("syntax error at or near NOT").
+     */
+    private function createIndex(string $name, string $definition): void
+    {
+        DB::statement("
+            DO \$wn\$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relkind = 'i' AND relname = '{$name}') THEN
+                    CREATE INDEX {$name} ON {$definition};
+                END IF;
+            END
+            \$wn\$;
+        ");
     }
 };
